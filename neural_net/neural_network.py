@@ -1,28 +1,50 @@
+import PIL.Image
 import numpy as np
 import keras
 from keras import layers
+import PIL
+import pdb
 
 def clean_data(data):
-    (X_train, Y_train), (X_test, Y_test) = data
+    (x_train, y_train), (x_test, y_test) = data
+    x_train_new = []
+    x_test_new = []
+    for i, im in enumerate(x_train):
+        small_im = im.reshape((1, 7, 4, 7, 4)).max(4).max(2)
+        for i in range(7):
+            for j in range(7):
+                if small_im[0][i][j] > 127:
+                    small_im[0][i][j]=1
+                else:
+                    small_im[0][i][j]=0
+        x_train_new.append(np.array(small_im))
 
-    X_train = X_train.reshape(60000, 784)
-    X_test = X_test.reshape(10000, 784)
-    X_train = X_train.astype('float32') / 255
-    X_test = X_test.astype('float32') / 255
-    X_train = np.where(X_train >= 0.5, 1, 0).astype('int8')  # (60000 x 784) binary values
-    X_test = np.where(X_test >= 0.5, 1, 0).astype('int8')  # (10000 x 784) binary values
+    for i, im in enumerate(x_test):
+        small_im = im.reshape((1, 7, 4, 7, 4)).max(4).max(2)
+        for i in range(7):
+            for j in range(7):
+                if small_im[0][i][j] > 127:
+                    small_im[0][i][j]=1
+                else:
+                    small_im[0][i][j]=0
+        x_test_new.append(np.array(small_im))
 
-    Y_train = keras.utils.to_categorical(Y_train, 10)  # (60000 x 10) 1-hot encoded
-    Y_test = keras.utils.to_categorical(Y_test, 10)  # (10000 x 10) 1-hot encoded
+    x_train_new = np.array(x_train_new)
+    x_test_new = np.array(x_test_new)
+    x_train_new = x_train_new.reshape(60000, 49)
+    x_test_new = x_test_new.reshape(10000, 49)
 
-    return X_train, Y_train, X_test, Y_test
+    y_train = keras.utils.to_categorical(y_train, 10)  # (60000 x 10) 1-hot encoded
+    y_test = keras.utils.to_categorical(y_test, 10)  # (10000 x 10) 1-hot encoded
+
+    return x_train_new, y_train, x_test_new, y_test
 
 def train_new_model(model_name):
     X_train, Y_train, X_test, Y_test = clean_data(keras.datasets.mnist.load_data())
 
     model = keras.Sequential(
         [
-            keras.Input(shape=(784,)),
+            keras.Input(shape=(49,)),
             layers.Dense(10),
             layers.Activation('relu'),
             layers.Dense(10),
@@ -57,11 +79,29 @@ def forward(model_name, iterations=10000):
         if a < 0:
             b = ~(abs(b)) + 1
         return b
-
+    
+    def new_values(array):
+        for i, row in enumerate(array):
+            for j in range(10):
+                new_value=array[i][j]
+                array[i][j]=round(new_value*100)
+        return array.astype('int8')
+    
+    def new_biases(array):
+        for i, row in enumerate(array):
+            new_value=array[i]
+            array[i]=round(new_value*100)
+        return array.astype('int8')
+    
     weights1 = np.vectorize(to_fixed)(weights1).astype('int8')
     biases1 = np.vectorize(to_fixed)(biases1).astype('int8')
     weights2 = np.vectorize(to_fixed)(weights2).astype('int8')
     biases2 = np.vectorize(to_fixed)(biases2).astype('int8')
+
+    '''weights1=new_values(weights1)
+    weights2=new_values(weights2)
+    biases1=new_biases(biases1)
+    biases2=new_biases(biases2)'''
 
     count = 0
     total = 0
@@ -128,5 +168,6 @@ def main():
     forward(model_name, 10000)
 
 if __name__ == '__main__':
-    X_train, Y_train, X_test, Y_test = clean_data(keras.datasets.mnist.load_data())
-    print((X_train[0]))
+    model_name = 'mnist_model.keras'
+    train_new_model(model_name)
+    forward(model_name, 10000)
