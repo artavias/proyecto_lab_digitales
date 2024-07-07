@@ -162,10 +162,7 @@ def forward(model_name, iterations=10000):
 
     print(f'Accuracy: {count} / {total} = {count / total * 100}%')
 
-def main():
-    model_name = 'mnist_model.keras'
-    # train_new_model(model_name)
-    forward(model_name, 10000)
+
 
 if __name__ == '__main__':
     model_name = 'mnist_model.keras'
